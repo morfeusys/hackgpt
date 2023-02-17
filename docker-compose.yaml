@@ -1,0 +1,19 @@
+version: "3.4"
+
+services:
+  app:
+    build: .
+    image: hackgpt
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    env_file:
+      - .env
+  redis:
+    image: redis:alpine
+    entrypoint: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - .redis:/data

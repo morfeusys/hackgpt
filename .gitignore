@@ -1,0 +1,5 @@
+/.idea/
+/.redis/
+/node_modules/
+/.env
+/hackgpt.iml
