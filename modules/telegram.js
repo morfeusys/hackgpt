@@ -179,7 +179,7 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         } catch (e) {
             console.error(e)
             try {
-                bot.sendMessage(chatId, e.response.data.error.message, form)
+                bot.sendMessage(chatId, e.message, form)
             } catch (e) {
                 console.error(`Cannot process chatGPT text "${msg.text}"`, e)
                 bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)

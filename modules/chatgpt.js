@@ -29,16 +29,22 @@ module.exports = async (app) => {
             }
         })
 
-        const data = resp.data.substring(resp.data.lastIndexOf('data: {') + 6, resp.data.indexOf('data: [DONE]')).trim()
-        const json = JSON.parse(data)
+        if (typeof resp.data === 'string') {
+            const data = resp.data.substring(resp.data.lastIndexOf('data: {') + 6, resp.data.indexOf('data: [DONE]')).trim()
+            const json = JSON.parse(data)
 
-        const result = {
-            conversationId: json['conversation_id'],
-            response: json['message']['content']['parts'][0]
+            const result = {
+                conversationId: json['conversation_id'],
+                response: json['message']['content']['parts'][0]
+            }
+
+            conversations.set(result.conversationId, json['message']['id'])
+            return result
         }
 
-        conversations.set(result.conversationId, json['message']['id'])
-        return result
+        if (typeof resp.data === 'object') {
+            throw new Error(resp.data['detail'])
+        }
     }
 
     app.get('/chatgpt/conversation', async (req, res) => {
@@ -46,7 +52,7 @@ module.exports = async (app) => {
             res.send(await conversation(req.query['prompt'], req.query['conversationId']))
         } catch (e) {
             console.error(e)
-            res.sendStatus(500)
+            res.status(500).send(e.message)
         }
     })
 
