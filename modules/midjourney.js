@@ -8,7 +8,9 @@ const { Client } = require('discord.js-selfbot-v13')
 const midjourneyBotId = '936929561302675456'
 const listeners = []
 const errorMessages = ['Invalid', 'Banned']
-const badWordsFilter = new badWords();
+const badWordsFilter = new badWords({
+    placeHolder: ' '
+});
 
 (async () => {
     const rl = readline.createInterface({
@@ -80,6 +82,7 @@ async function startClient() {
                         })
                         jobs.set(job.id, job)
                         callJobListeners(job)
+                        return
                     }
                 }
             }
@@ -94,7 +97,7 @@ async function startClient() {
                     upscaled: msg.content.indexOf(' - Upscaled ') !== -1,
                     actions: msg.components.map(row => {
                         return row.components.filter(btn => btn.customId && btn.customId.indexOf('::RATING::') === -1).map(btn => {
-                            return {label: btn.label || btn.emoji.name, id: btn.customId, type: btn.type, url: btn.url}
+                            return {label: btn.label || btn.emoji.name, id: btn.customId}
                         })
                     }).filter(row => row.length > 0)
                 })
@@ -147,9 +150,7 @@ async function startClient() {
             return job
         },
         runJob: async (job) => {
-            if (badWordsFilter.isProfane(job.prompt)) {
-                return null
-            }
+            job.prompt = badWordsFilter.clean(job.prompt).trim()
             job = Object.assign(job, {id: crypto.randomBytes(10).toString('hex'), tasks: 1, images: []})
             job.prompt = job.prompt.replaceAll("—", '--')
             let cidx = job.prompt.indexOf('--')

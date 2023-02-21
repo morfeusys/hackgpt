@@ -1,7 +1,7 @@
 const redis = require('./redis.js')
 const crypto = require('crypto')
 const axios = require('axios')
-const { encode } = require('gpt-3-encoder');
+const { encode } = require('gpt-3-encoder')
 
 const preamble = "You are ChatGPT, a large language model trained by OpenAI."
 const maxTokens = 4000
@@ -18,7 +18,7 @@ module.exports = async (app) => {
     }
 
     async function conversation(conversationId, request, options) {
-        conversationId = conversationId || crypto.randomUUID()
+        conversationId = conversationId || crypto.randomBytes(10).toString('hex')
         let conversation = await conversations.get(conversationId)
         if (!conversation) {
             conversation = {
@@ -69,7 +69,7 @@ module.exports = async (app) => {
 
     app.post('/chatgpt/complete', async (req, res) => {
         try {
-            res.send(await complete(req.body))
+            res.send((await complete(req.body)).data)
         } catch (e) {
             console.error(e)
             res.sendStatus(500)

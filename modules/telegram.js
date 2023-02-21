@@ -58,6 +58,10 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
             markup.inline_keyboard = markup.inline_keyboard[0].map(btn => [btn])
         }
 
+        if (image.upscaled) {
+            markup.inline_keyboard.push([{text: 'Open full image', url: image.url}])
+        }
+
         images.set(message.id, image.id)
         try {
             await bot.editMessageMedia( {

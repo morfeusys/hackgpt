@@ -1,3 +1,4 @@
+Bare
 Blood
 Bloodbath
 Crucifixion
@@ -11,7 +12,7 @@ Cutting
 Decapitate
 Infested
 Gruesome
-Kill (as in Kill la Kill)
+Kill
 Infected
 Sadist
 Slaughter
