@@ -167,10 +167,11 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         const session = await sessions.get(chatId) || {}
         const form = {reply_to_message_id: msg.message_id}
         try {
-            const result = await chatgpt.conversation(session.conversationId, msg.text)
+            const result = await chatgpt.conversation(msg.text, session.conversationId)
             session.conversationId = result.conversationId
             sessions.set(chatId, session)
             bot.sendMessage(chatId, result.response, Object.assign(form, {
+                parse_mode: 'Markdown',
                 reply_markup: JSON.stringify({
                     inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
                 })

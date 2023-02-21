@@ -8,8 +8,10 @@ schemes:
 produces:
   - application/json
 tags:
-  - name: chatgpt
-    description: Text completion with GPT
+  - name: chatGPT
+    description: Text completion with chatGPT
+  - name: GPT-3
+    description: Text completion with GPT-3
   - name: Midjourney
     description: Image generation with Midjourney
 definitions:
@@ -116,20 +118,43 @@ definitions:
 paths:
   /chatgpt/conversation:
     get:
-      summary: Get a response from GPT
+      summary: Get a response from chatGPT
       description: |
-        Returns a response from GPT given a prompt and conversation ID.
+        Returns a response from chatGPT given a prompt and conversation ID.
       tags:
-        - chatgpt
+        - chatGPT
       parameters:
         - name: prompt
           in: query
-          description: The prompt to give GPT.
+          description: The prompt to give chatGPT.
           required: true
           type: string
         - name: conversationId
           in: query
-          description: The ID of the conversation with ChatGPT.
+          description: The ID of the conversation with chatGPT.
+          required: false
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/GPTConversation'
+  /gpt/conversation:
+    get:
+      summary: Get a response from GPT-3
+      description: |
+        Returns a response from GPT given a prompt and conversation ID.
+      tags:
+        - GPT-3
+      parameters:
+        - name: prompt
+          in: query
+          description: The prompt to give GPT-3.
+          required: true
+          type: string
+        - name: conversationId
+          in: query
+          description: The ID of the conversation with GPT-3.
           required: false
           type: string
       responses:
@@ -140,11 +165,11 @@ paths:
     post:
       consumes:
         - application/json
-      summary: Get a response from GPT
+      summary: Get a response from GPT-3
       description: |
-        Returns a response from GPT given a prompt and conversation ID.
+        Returns a response from GPT-3 given a prompt and conversation ID.
       tags:
-        - chatgpt
+        - GPT-3
       parameters:
         - name: body
           in: body
@@ -155,24 +180,24 @@ paths:
             properties:
               prompt:
                 type: string
-                description: The prompt to give GPT.
+                description: The prompt to give GPT-3.
               conversationId:
                 type: string
-                description: The ID of the conversation with GPT.
+                description: The ID of the conversation with GPT-3.
       responses:
         200:
           description: OK
           schema:
             $ref: '#/definitions/GPTConversation'
-  /chatgpt/complete:
+  /gpt/complete:
     post:
       consumes:
         - application/json
-      summary: Get a text completion from GPT model
+      summary: Get a text completion from GPT-3 model
       description: |
-        Returns a text completion from ChatGPT given a prompt and other parameters.
+        Returns a text completion from GPT-3 given a prompt and other parameters.
       tags:
-        - chatgpt
+        - GPT-3
       parameters:
         - name: body
           in: body
@@ -183,7 +208,7 @@ paths:
             properties:
               prompt:
                 type: string
-                description: The prompt to give GPT model.
+                description: The prompt to give GPT-3 model.
               temperature:
                 type: number
                 format: double
