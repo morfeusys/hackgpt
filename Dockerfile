@@ -8,6 +8,7 @@ RUN npm install
 
 COPY index.js .
 COPY stopwords.txt .
+COPY swagger.yaml .
 COPY modules ./modules
 
 EXPOSE 8000
