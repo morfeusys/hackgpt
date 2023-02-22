@@ -39,6 +39,7 @@ module.exports = async (app) => {
                 response: json['message']['content']['parts'][0]
             }
 
+            console.log(`[chatGPT] ${conversationId} "${result.response}"`)
             conversations.set(result.conversationId, json['message']['id'])
             return result
         }

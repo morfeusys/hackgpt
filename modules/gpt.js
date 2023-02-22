@@ -62,6 +62,7 @@ module.exports = async (app) => {
         let text = !!result.data['choices'].length && result.data['choices'][0]['text'].trim() || ''
         conversation.history = prompt + text
         conversations.set(conversationId, conversation)
+        console.log(`[GPT] ${conversationId} "${text}"`)
         return {
             response: text,
             conversationId: conversationId
