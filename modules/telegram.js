@@ -133,12 +133,14 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
     }
 
     async function processWhisper(msg) {
-        bot.sendMessage(msg.chat.id, 'Select a language to transcribe', {
-            reply_to_message_id: msg.message_id,
-            reply_markup: JSON.stringify({
-                inline_keyboard: [[{text: 'Auto', callback_data: 'auto'}, {text: 'en', callback_data: 'en'}, {text: 'ru', callback_data: 'ru'}]]
+        try {
+            bot.sendMessage(msg.chat.id, 'Select a language to transcribe', {
+                reply_to_message_id: msg.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[{text: 'Auto', callback_data: 'auto'}, {text: 'en', callback_data: 'en'}, {text: 'ru', callback_data: 'ru'}]]
+                })
             })
-        })
+        } catch (e) {}
     }
 
     async function transcribe(msg, lang) {
@@ -147,18 +149,20 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         const stream = await bot.getFileStream(msg.voice.file_id)
         const result = await whisper.transcribe(stream, lang === 'auto' ? null : lang)
         await bot.deleteMessage(chatId, waitMessage.message_id)
-        if (result) {
-            bot.sendMessage(chatId, result, {
-                reply_to_message_id: msg.message_id,
-                reply_markup: JSON.stringify({
-                    inline_keyboard: [[{text: 'To chatGPT', callback_data: 'send:chatgpt'}, {text: 'To Midjourney', callback_data: 'send:midjourney'}]]
+        try {
+            if (result) {
+                bot.sendMessage(chatId, result, {
+                    reply_to_message_id: msg.message_id,
+                    reply_markup: JSON.stringify({
+                        inline_keyboard: [[{text: 'To chatGPT', callback_data: 'send:chatgpt'}, {text: 'To Midjourney', callback_data: 'send:midjourney'}]]
+                    })
                 })
-            })
-        } else {
-            bot.sendMessage(chatId, '😢 Sorry, but I cannot transcribe this voice note...', {
-                reply_to_message_id: msg.message_id
-            })
-        }
+            } else {
+                bot.sendMessage(chatId, '😢 Sorry, but I cannot transcribe this voice note...', {
+                    reply_to_message_id: msg.message_id
+                })
+            }
+        } catch (e) {}
     }
 
     async function processChatGPT(msg) {
@@ -167,63 +171,67 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         const session = await sessions.get(chatId) || {}
         const form = {reply_to_message_id: msg.message_id}
         try {
-            const result = await chatgpt.conversation(msg.text, session.conversationId)
-            session.conversationId = result.conversationId
-            sessions.set(chatId, session)
-            bot.sendMessage(chatId, result.response, Object.assign(form, {
-                parse_mode: 'Markdown',
-                reply_markup: JSON.stringify({
-                    inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
-                })
-            }))
-        } catch (e) {
-            const err = e.response ? e.response.data.error.message : e.message
-            console.error(`[Telegram] ${err}`)
             try {
-                bot.sendMessage(chatId, err, form)
+                const result = await chatgpt.conversation(msg.text, session.conversationId)
+                session.conversationId = result.conversationId
+                sessions.set(chatId, session)
+                bot.sendMessage(chatId, result.response, Object.assign(form, {
+                    parse_mode: 'Markdown',
+                    reply_markup: JSON.stringify({
+                        inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
+                    })
+                }))
             } catch (e) {
-                console.error(`Cannot process chatGPT text "${msg.text}"`, e.message)
-                bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
+                const err = e.response ? e.response.data.error.message : e.message
+                console.error(`[Telegram] ${err}`)
+                try {
+                    bot.sendMessage(chatId, err, form)
+                } catch (e) {
+                    console.error(`Cannot process chatGPT text "${msg.text}"`, e.message)
+                    bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
+                }
+            } finally {
+                bot.deleteMessage(chatId, waitingMessage.message_id)
             }
-        } finally {
-            bot.deleteMessage(chatId, waitingMessage.message_id)
-        }
+        } catch (e) {}
     }
 
     async function processMidjourney(msg, actionId) {
         const chatId = msg.chat.id
+        try {
+            let job
+            if (msg.text) {
+                const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
+                if (!prompt) {
+                    bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
+                    return
+                } else {
+                    job = await midjourney.runJob({prompt: prompt})
+                }
+            } else if (actionId) {
+                const imageId = await images.get(msg.message_id)
+                if (imageId) {
+                    job = await midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
+                }
+            }
 
-        let job
-        if (msg.text) {
-            const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
-            if (!prompt) {
-                bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
-                return
+            if (job) {
+                const image = await bot.sendAnimation(chatId, paintingAnimations[Math.floor(Math.random() * paintingAnimations.length)], {
+                    caption: paintingMessages[Math.floor(Math.random() * paintingMessages.length)]
+                })
+                const messages = await jobMessages.get(job.id) || []
+                messages.push({
+                    id: image.message_id,
+                    chatId: chatId
+                })
+                jobMessages.set(job.id, messages)
             } else {
-                job = await midjourney.runJob({prompt: prompt})
+                bot.sendMessage(chatId, '😱 Oh no! I cannot create such image for some reason...', {
+                    reply_to_message_id: msg.message_id
+                })
             }
-        } else if (actionId) {
-            const imageId = await images.get(msg.message_id)
-            if (imageId) {
-                job = await midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
-            }
-        }
+        } catch (e) {}
 
-        if (job) {
-            const image = await bot.sendAnimation(chatId, paintingAnimations[Math.floor(Math.random() * paintingAnimations.length)], {
-                caption: paintingMessages[Math.floor(Math.random() * paintingMessages.length)]
-            })
-            const messages = await jobMessages.get(job.id) || []
-            messages.push({
-                id: image.message_id,
-                chatId: chatId
-            })
-            jobMessages.set(job.id, messages)
-        } else {
-            bot.sendMessage(chatId, '😱 Oh no! I cannot create such image for some reason...', {
-                reply_to_message_id: msg.message_id
-            })
-        }
     }
 }
 
