@@ -51,7 +51,7 @@ module.exports = async (app) => {
         try {
             res.send(await conversation(req.query['prompt'], req.query['conversationId']))
         } catch (e) {
-            console.error(e)
+            console.error(`[ChatGPT] ${e.message}`)
             res.status(500).send(e.message)
         }
     })

@@ -177,11 +177,12 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
                 })
             }))
         } catch (e) {
-            console.error(e)
+            const err = e.response ? e.response.data.error.message : e.message
+            console.error(`[Telegram] ${err}`)
             try {
-                bot.sendMessage(chatId, e.message, form)
+                bot.sendMessage(chatId, err, form)
             } catch (e) {
-                console.error(`Cannot process chatGPT text "${msg.text}"`, e)
+                console.error(`Cannot process chatGPT text "${msg.text}"`, e.message)
                 bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
             }
         } finally {

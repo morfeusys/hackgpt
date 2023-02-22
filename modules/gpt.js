@@ -71,7 +71,7 @@ module.exports = async (app) => {
         try {
             res.send((await complete(req.body)).data)
         } catch (e) {
-            console.error(e)
+            console.error(`[GPT] ${e.message}`)
             res.sendStatus(500)
         }
     })
@@ -80,7 +80,7 @@ module.exports = async (app) => {
         try {
             res.send(await conversation(req.query['prompt'], req.query['conversationId']))
         } catch (e) {
-            console.error(e)
+            console.error(`[GPT] ${e.message}`)
             res.sendStatus(500)
         }
     })
@@ -89,7 +89,7 @@ module.exports = async (app) => {
         try {
             res.send(await conversation(req.body['prompt'], req.body['conversationId'], req.body['options']))
         } catch (e) {
-            console.error(e)
+            console.error(`[GPT] ${e.message}`)
             res.sendStatus(500)
         }
     })

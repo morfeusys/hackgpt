@@ -123,14 +123,14 @@ async function startClient() {
                 try {
                     await channel.sendSlash(midjourneyBotId, 'imagine', task.prompt)
                 } catch (e) {
-                    console.error(`Cannot run prompt "${task.prompt}"`, e)
+                    console.error(`Cannot run prompt "${task.prompt}"`, e.message)
                 }
             } else if (task.actionId && task.imageId) {
                 try {
                     const msg = await channel.messages.fetch(task.imageId)
                     await msg.clickButton(task.actionId)
                 } catch (e) {
-                    console.error(`Cannot run action ${task.actionId} on image ${task.imageId}`, e)
+                    console.error(`Cannot run action ${task.actionId} on image ${task.imageId}`, e.message)
                 }
             }
         }

@@ -14,7 +14,7 @@ module.exports = {
             })
             return response.data
         } catch (e) {
-            console.error('Cannot transcribe voice', e)
+            console.error('Cannot transcribe voice', e.message)
             return null
         }
     }
