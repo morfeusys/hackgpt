@@ -17,6 +17,10 @@ app.use(`/api`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))
 const port = process.env.PORT || 8000
 app.listen(port, async () => {
     console.log(`Server is listening on ${port}`)
-    await gpt(app)
-    telegram(app, await chatgpt(app), await midjourney(app), whisper)
+    telegram(app, {
+        chatgpt: await chatgpt(app),
+        gpt: await gpt(app),
+        midjourney: await midjourney(app),
+        whisper: whisper
+    })
 })

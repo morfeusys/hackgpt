@@ -4,8 +4,9 @@ const TelegramBot = require('node-telegram-bot-api')
 const token = process.env.TELEGRAM_BOT_TOKEN
 const externalUrl = process.env.EXTERNAL_URL
 const imagineCommand = '/imagine'
+const chatGPTCommand = '/chatgpt'
 
-module.exports = async (app, chatgpt, midjourney, whisper) => {
+module.exports = async (app, services) => {
     const sessions = await redis('telegram-session')
     const jobMessages = await redis('telegram-image-job')
     const images = await redis('telegram-image')
@@ -24,7 +25,7 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         bot.deleteWebHook()
     }
 
-    midjourney.onJobComplete(async (job) => {
+    services.midjourney.onJobComplete(async (job) => {
         if (!job.images || !job.images.length) return
         const image = job.images[job.images.length - 1]
         const messages = await jobMessages.get(job.id)
@@ -89,10 +90,11 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id
         if (msg.text === '/start') {
-            await bot.sendMessage(chatId, 'Hello! I am here to help you somehow...')
-            await bot.sendMessage(chatId, 'Send me a text message to talk using chatGPT. And use /reset once you\'d like to restart a conversation.')
-            await bot.sendMessage(chatId, 'Send /imagine command to generate a beautiful Midjorney image.')
-            await bot.sendMessage(chatId, 'Send a voice note to recognise it through Whisper.')
+            await bot.sendMessage(chatId, 'Hello! I am here to help you somehow...\n\n' +
+                'Send me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
+                'Send /imagine command to generate a beautiful Midjorney image.\n\n' +
+                'Send a voice note to recognise it through Whisper.'
+            )
             await bot.sendMessage(chatId, 'That is all I can, sorry...')
         } else if (msg.text === '/reset') {
             sessions.del(chatId)
@@ -118,8 +120,11 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
     }
 
     async function send(msg, to) {
+        if (to === 'gpt') {
+            processGPT(msg, 'gpt')
+        }
         if (to === 'chatgpt') {
-            processChatGPT(msg)
+            processGPT(msg, 'chatgpt')
         }
         if (to === 'midjourney') {
             processMidjourney(msg)
@@ -131,8 +136,8 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
             processMidjourney(msg)
         } else if (msg.voice) {
             processWhisper(msg)
-        } else {
-            processChatGPT(msg)
+        } else if (msg.text) {
+            processGPT(msg)
         }
     }
 
@@ -152,13 +157,16 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
             const chatId = msg.chat.id
             const waitMessage = await sendWaitingMessage(chatId)
             const stream = await bot.getFileStream(msg.voice.file_id)
-            const result = await whisper.transcribe(stream, lang === 'auto' ? null : lang)
+            const result = await services.whisper.transcribe(stream, lang === 'auto' ? null : lang)
             await bot.deleteMessage(chatId, waitMessage.message_id)
             if (result) {
                 bot.sendMessage(chatId, result, {
                     reply_to_message_id: msg.message_id,
                     reply_markup: JSON.stringify({
-                        inline_keyboard: [[{text: 'To chatGPT', callback_data: 'send:chatgpt'}, {text: 'To Midjourney', callback_data: 'send:midjourney'}]]
+                        inline_keyboard: [[
+                            {text: 'To GPT', callback_data: 'send:gpt'},
+                            {text: 'To Midjourney', callback_data: 'send:midjourney'}
+                        ]]
                     })
                 })
             } else {
@@ -169,14 +177,20 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         } catch (e) {}
     }
 
-    async function processChatGPT(msg) {
+    async function processGPT(msg, type) {
+        type = type || (msg.text.startsWith(chatGPTCommand) ? 'chatgpt' : 'gpt')
+        const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length) : msg.text
         try {
             const chatId = msg.chat.id
+            if (!request) {
+                bot.sendMessage(chatId, `Usage: ${chatGPTCommand} sometextgoeshere`)
+                return
+            }
             const waitingMessage = await sendWaitingMessage(chatId)
             const session = await sessions.get(chatId) || {}
             const form = {reply_to_message_id: msg.message_id}
             try {
-                const result = await chatgpt.conversation(msg.text, session.conversationId)
+                const result = await services[type].conversation(request, session.conversationId)
                 session.conversationId = result.conversationId
                 sessions.set(chatId, session)
                 bot.sendMessage(chatId, result.response, Object.assign(form, {
@@ -191,7 +205,7 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
                 try {
                     bot.sendMessage(chatId, err, form)
                 } catch (e) {
-                    console.error(`Cannot process chatGPT text "${msg.text}"`, e.message)
+                    console.error(`Cannot process GPT text "${msg.text}"`, e.message)
                     bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
                 }
             } finally {
@@ -210,12 +224,12 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
                     bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
                     return
                 } else {
-                    job = await midjourney.runJob({prompt: prompt})
+                    job = await services.midjourney.runJob({prompt: prompt})
                 }
             } else if (actionId) {
                 const imageId = await images.get(msg.message_id)
                 if (imageId) {
-                    job = await midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
+                    job = await services.midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
                 }
             }
 

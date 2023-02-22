@@ -51,7 +51,7 @@ async function startClient() {
     }
 
     client.on('ready', async () => {
-        console.log(`Discord ${client.user.username} is ready!`);
+        console.log(`[Midjourney] Discord ${client.user.username} is ready!`);
         channel = await client.channels.fetch(process.env.MJ_DISCORD_CHANNEL)
 
         setInterval( async () => {
@@ -89,7 +89,7 @@ async function startClient() {
 
             let attachement = msg.attachments.size && msg.attachments.first()
             if (job && attachement) {
-                console.log(`Midjourney done ${job.id} ${attachement.url}`)
+                console.log(`[Midjourney] done ${job.id} ${attachement.url}`)
 
                 job.images.push({
                     id: msg.id,
@@ -118,19 +118,19 @@ async function startClient() {
 
     async function runTask(task) {
         if (task && channel) {
-            console.log(`Running ${JSON.stringify(task)}`)
+            console.log(`[Midjourney] running ${JSON.stringify(task)}`)
             if (task.prompt) {
                 try {
                     await channel.sendSlash(midjourneyBotId, 'imagine', task.prompt)
                 } catch (e) {
-                    console.error(`Cannot run prompt "${task.prompt}"`, e.message)
+                    console.error(`[Midjourney] cannot run prompt "${task.prompt}"`, e.message)
                 }
             } else if (task.actionId && task.imageId) {
                 try {
                     const msg = await channel.messages.fetch(task.imageId)
                     await msg.clickButton(task.actionId)
                 } catch (e) {
-                    console.error(`Cannot run action ${task.actionId} on image ${task.imageId}`, e.message)
+                    console.error(`[Midjourney] cannot run action ${task.actionId} on image ${task.imageId}`, e.message)
                 }
             }
         }

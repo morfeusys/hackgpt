@@ -6,6 +6,7 @@ module.exports = async (app) => {
     const conversations = await redis('chatgpt-conversation')
 
     async function conversation(request, conversationId) {
+        console.log(`[chatGPT] "${request}" ${conversationId || ''}`)
         const messageId = conversationId ? await conversations.get(conversationId) : crypto.randomUUID()
         const req = {
             'model': 'text-davinci-002-render-sha',

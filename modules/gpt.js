@@ -18,6 +18,7 @@ module.exports = async (app) => {
     }
 
     async function conversation(request, conversationId, options) {
+        console.log(`[GPT] "${request}" ${conversationId || ''}`)
         conversationId = conversationId || crypto.randomUUID()
         let conversation = await conversations.get(conversationId)
         if (!conversation) {
