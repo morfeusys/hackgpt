@@ -36,10 +36,12 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
         jobMessages.set(job.id, messages)
 
         if (image.error) {
-            await bot.deleteMessage(message.chatId, message.id)
-            bot.sendMessage(message.chatId, `⚠️ Oops! I cannot create an image for _"${job.prompt}"_\n\n${image.error}`, {
-                parse_mode: 'Markdown'
-            })
+            try {
+                await bot.deleteMessage(message.chatId, message.id)
+                bot.sendMessage(message.chatId, `⚠️ Oops! I cannot create an image for _"${job.prompt}"_\n\n${image.error}`, {
+                    parse_mode: 'Markdown'
+                })
+            } catch (e) {}
             return
         }
 
@@ -75,10 +77,12 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
             })
         } catch (e) {
             await bot.deleteMessage(message.chatId, message.id)
-            bot.sendMessage(message.chatId, `[Here is your image](${image.url}) for _"${job.prompt}"_`, {
-                parse_mode: 'Markdown',
-                reply_markup: JSON.stringify(markup)
-            })
+            try {
+                bot.sendMessage(message.chatId, `[Here is your image](${image.url}) for _"${job.prompt}"_`, {
+                    parse_mode: 'Markdown',
+                    reply_markup: JSON.stringify(markup)
+                })
+            } catch (e) {}
         }
     })
 
@@ -144,12 +148,12 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
     }
 
     async function transcribe(msg, lang) {
-        const chatId = msg.chat.id
-        const waitMessage = await sendWaitingMessage(chatId)
-        const stream = await bot.getFileStream(msg.voice.file_id)
-        const result = await whisper.transcribe(stream, lang === 'auto' ? null : lang)
-        await bot.deleteMessage(chatId, waitMessage.message_id)
         try {
+            const chatId = msg.chat.id
+            const waitMessage = await sendWaitingMessage(chatId)
+            const stream = await bot.getFileStream(msg.voice.file_id)
+            const result = await whisper.transcribe(stream, lang === 'auto' ? null : lang)
+            await bot.deleteMessage(chatId, waitMessage.message_id)
             if (result) {
                 bot.sendMessage(chatId, result, {
                     reply_to_message_id: msg.message_id,
@@ -166,11 +170,11 @@ module.exports = async (app, chatgpt, midjourney, whisper) => {
     }
 
     async function processChatGPT(msg) {
-        const chatId = msg.chat.id
-        const waitingMessage = await sendWaitingMessage(chatId)
-        const session = await sessions.get(chatId) || {}
-        const form = {reply_to_message_id: msg.message_id}
         try {
+            const chatId = msg.chat.id
+            const waitingMessage = await sendWaitingMessage(chatId)
+            const session = await sessions.get(chatId) || {}
+            const form = {reply_to_message_id: msg.message_id}
             try {
                 const result = await chatgpt.conversation(msg.text, session.conversationId)
                 session.conversationId = result.conversationId
