@@ -37,12 +37,10 @@ module.exports = async (app, services) => {
         jobMessages.set(job.id, messages)
 
         if (image.error) {
-            try {
-                await bot.deleteMessage(message.chatId, message.id)
-                bot.sendMessage(message.chatId, `⚠️ Oops! I cannot create an image for _"${job.prompt}"_\n\n${image.error}`, {
-                    parse_mode: 'Markdown'
-                })
-            } catch (e) {}
+            await bot.deleteMessage(message.chatId, message.id)
+            bot.sendMessage(message.chatId, `⚠️ Oops! I cannot create an image for _"${job.prompt}"_\n\n${image.error}`, {
+                parse_mode: 'Markdown'
+            })
             return
         }
 
@@ -78,12 +76,10 @@ module.exports = async (app, services) => {
             })
         } catch (e) {
             await bot.deleteMessage(message.chatId, message.id)
-            try {
-                bot.sendMessage(message.chatId, `[Here is your image](${image.url}) for _"${job.prompt}"_`, {
-                    parse_mode: 'Markdown',
-                    reply_markup: JSON.stringify(markup)
-                })
-            } catch (e) {}
+            bot.sendMessage(message.chatId, `[Here is your image](${image.url}) for _"${job.prompt}"_`, {
+                parse_mode: 'Markdown',
+                reply_markup: JSON.stringify(markup)
+            })
         }
     })
 
@@ -142,114 +138,108 @@ module.exports = async (app, services) => {
     }
 
     async function processWhisper(msg) {
-        try {
-            bot.sendMessage(msg.chat.id, 'Select a language to transcribe', {
-                reply_to_message_id: msg.message_id,
-                reply_markup: JSON.stringify({
-                    inline_keyboard: [[{text: 'Auto', callback_data: 'auto'}, {text: 'en', callback_data: 'en'}, {text: 'ru', callback_data: 'ru'}]]
-                })
+        bot.sendMessage(msg.chat.id, 'Select a language to transcribe', {
+            reply_to_message_id: msg.message_id,
+            reply_markup: JSON.stringify({
+                inline_keyboard: [[{text: 'Auto', callback_data: 'auto'}, {text: 'en', callback_data: 'en'}, {text: 'ru', callback_data: 'ru'}]]
             })
-        } catch (e) {}
+        })
     }
 
     async function transcribe(msg, lang) {
-        try {
-            const chatId = msg.chat.id
-            const waitMessage = await sendWaitingMessage(chatId)
-            const stream = await bot.getFileStream(msg.voice.file_id)
-            const result = await services.whisper.transcribe(stream, lang === 'auto' ? null : lang)
-            await bot.deleteMessage(chatId, waitMessage.message_id)
-            if (result) {
-                bot.sendMessage(chatId, result, {
-                    reply_to_message_id: msg.message_id,
-                    reply_markup: JSON.stringify({
-                        inline_keyboard: [[
-                            {text: 'To GPT', callback_data: 'send:gpt'},
-                            {text: 'To Midjourney', callback_data: 'send:midjourney'}
-                        ]]
-                    })
+        const chatId = msg.chat.id
+        const waitMessage = await sendWaitingMessage(chatId)
+        const stream = await bot.getFileStream(msg.voice.file_id)
+        const result = await services.whisper.transcribe(stream, lang === 'auto' ? null : lang)
+        await bot.deleteMessage(chatId, waitMessage.message_id)
+        if (result) {
+            bot.sendMessage(chatId, result, {
+                reply_to_message_id: msg.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[
+                        {text: 'To GPT', callback_data: 'send:gpt'},
+                        {text: 'To Midjourney', callback_data: 'send:midjourney'}
+                    ]]
                 })
-            } else {
-                bot.sendMessage(chatId, '😢 Sorry, but I cannot transcribe this voice note...', {
-                    reply_to_message_id: msg.message_id
-                })
-            }
-        } catch (e) {}
+            })
+        } else {
+            bot.sendMessage(chatId, '😢 Sorry, but I cannot transcribe this voice note...', {
+                reply_to_message_id: msg.message_id
+            })
+        }
     }
 
     async function processGPT(msg, type) {
         type = type || (msg.text.startsWith(chatGPTCommand) ? 'chatgpt' : 'gpt')
         const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length) : msg.text
+        const chatId = msg.chat.id
+        if (!request) {
+            bot.sendMessage(chatId, `Usage: ${chatGPTCommand} sometextgoeshere`)
+            return
+        }
+        const waitingMessage = await sendWaitingMessage(chatId)
+        const session = await sessions.get(chatId) || {}
+        const form = {reply_to_message_id: msg.message_id}
         try {
-            const chatId = msg.chat.id
-            if (!request) {
-                bot.sendMessage(chatId, `Usage: ${chatGPTCommand} sometextgoeshere`)
-                return
-            }
-            const waitingMessage = await sendWaitingMessage(chatId)
-            const session = await sessions.get(chatId) || {}
-            const form = {reply_to_message_id: msg.message_id}
-            try {
-                const result = await services[type].conversation(request, session.conversationId)
-                session.conversationId = result.conversationId
+            const conversationId = session[type] ? session[type].conversationId : null
+            const result = await services[type].conversation(request, conversationId)
+            if (!conversationId) {
+                session[type] = {conversationId: result.conversationId}
                 sessions.set(chatId, session)
-                bot.sendMessage(chatId, result.response, Object.assign(form, {
-                    parse_mode: 'Markdown',
-                    reply_markup: JSON.stringify({
-                        inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
-                    })
-                }))
-            } catch (e) {
-                const err = e.response ? e.response.data.error.message : e.message
-                console.error(`[Telegram] ${err}`)
-                try {
-                    bot.sendMessage(chatId, err, form)
-                } catch (e) {
-                    console.error(`Cannot process GPT text "${msg.text}"`, e.message)
-                    bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
-                }
-            } finally {
-                bot.deleteMessage(chatId, waitingMessage.message_id)
             }
-        } catch (e) {}
+            bot.sendMessage(chatId, result.response, Object.assign(form, {
+                parse_mode: 'Markdown',
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
+                })
+            }))
+        } catch (e) {
+            const err = e.response ? e.response.data.error.message : e.message
+            console.error(`[Telegram] ${err}`)
+            try {
+                bot.sendMessage(chatId, err, form)
+            } catch (e) {
+                console.error(`Cannot process GPT text "${msg.text}"`, e.message)
+                bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)
+            }
+        } finally {
+            bot.deleteMessage(chatId, waitingMessage.message_id)
+        }
     }
 
     async function processMidjourney(msg, actionId) {
         const chatId = msg.chat.id
-        try {
-            let job
-            if (msg.text) {
-                const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
-                if (!prompt) {
-                    bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
-                    return
-                } else {
-                    job = await services.midjourney.runJob({prompt: prompt})
-                }
-            } else if (actionId) {
-                const imageId = await images.get(msg.message_id)
-                if (imageId) {
-                    job = await services.midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
-                }
-            }
-
-            if (job) {
-                const image = await bot.sendAnimation(chatId, paintingAnimations[Math.floor(Math.random() * paintingAnimations.length)], {
-                    caption: paintingMessages[Math.floor(Math.random() * paintingMessages.length)]
-                })
-                const messages = await jobMessages.get(job.id) || []
-                messages.push({
-                    id: image.message_id,
-                    chatId: chatId
-                })
-                jobMessages.set(job.id, messages)
+        let job
+        if (msg.text) {
+            const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
+            if (!prompt) {
+                bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
+                return
             } else {
-                bot.sendMessage(chatId, '😱 Oh no! I cannot create such image for some reason...', {
-                    reply_to_message_id: msg.message_id
-                })
+                job = await services.midjourney.runJob({prompt: prompt})
             }
-        } catch (e) {}
+        } else if (actionId) {
+            const imageId = await images.get(msg.message_id)
+            if (imageId) {
+                job = await services.midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
+            }
+        }
 
+        if (job) {
+            const image = await bot.sendAnimation(chatId, paintingAnimations[Math.floor(Math.random() * paintingAnimations.length)], {
+                caption: paintingMessages[Math.floor(Math.random() * paintingMessages.length)]
+            })
+            const messages = await jobMessages.get(job.id) || []
+            messages.push({
+                id: image.message_id,
+                chatId: chatId
+            })
+            jobMessages.set(job.id, messages)
+        } else {
+            bot.sendMessage(chatId, '😱 Oh no! I cannot create such image for some reason...', {
+                reply_to_message_id: msg.message_id
+            })
+        }
     }
 }
 
