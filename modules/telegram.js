@@ -171,7 +171,7 @@ module.exports = async (app, services) => {
 
     async function processGPT(msg, type) {
         type = type || (msg.text.startsWith(chatGPTCommand) ? 'chatgpt' : 'gpt')
-        const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length) : msg.text
+        const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length).trim() : msg.text
         const chatId = msg.chat.id
         if (!request) {
             bot.sendMessage(chatId, `Usage: ${chatGPTCommand} sometextgoeshere`)
@@ -197,7 +197,7 @@ module.exports = async (app, services) => {
             const err = e.response ? e.response.data.error.message : e.message
             console.error(`[Telegram] ${err}`)
             try {
-                bot.sendMessage(chatId, err, form)
+                bot.sendMessage(chatId, `⚠️ ${err}`, form)
             } catch (e) {
                 console.error(`Cannot process GPT text "${msg.text}"`, e.message)
                 bot.sendMessage(chatId, '⚠️ Sorry, there is some error inside me...', form)

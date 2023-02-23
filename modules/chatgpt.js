@@ -45,7 +45,8 @@ module.exports = async (app) => {
         }
 
         if (typeof resp.data === 'object') {
-            throw new Error(resp.data['detail'])
+            const detail = resp.data['detail']
+            throw new Error(detail['message'] ? detail['message'] : detail)
         }
     }
 
