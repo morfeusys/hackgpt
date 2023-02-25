@@ -2,6 +2,22 @@ const crypto = require('crypto')
 const WebSocket = require('ws')
 const axios = require('axios')
 
+function createMarkdownText(reply) {
+    const cards = reply['adaptiveCards']
+    const details = cards && cards.length ? cards[0]['body'].find(b => b.size === 'small') : null
+    if (details && details.text) {
+        let text = reply.text
+        for (let i = 1; i < 100; i++) {
+            const idx = details.text.indexOf(`[${i}.`)
+            if (idx === -1) break
+            const link = details.text.substring(details.text.indexOf('(', idx) + 1, details.text.indexOf(')', idx))
+            text = text.replace(`[^${i}^]`, ` [(${i})](${link})`)
+        }
+        return text
+    }
+    return reply.text
+}
+
 module.exports = (app) => {
 
     async function createNewConversation() {
@@ -232,10 +248,10 @@ module.exports = (app) => {
             invocationId: invocationId + 1,
             conversationExpiryTime,
             response: reply.text,
+            reply: reply
         };
 
-        console.log(`[chatGPT] ${result.conversationId} "${result.response}"`)
-
+        console.log(`[Bing] ${result.conversationId} "${result.response}"`)
         return result
     }
 
@@ -261,6 +277,7 @@ module.exports = (app) => {
     })
 
     return {
-        conversation: sendMessage
+        conversation: sendMessage,
+        createMarkdownText: createMarkdownText
     }
 }

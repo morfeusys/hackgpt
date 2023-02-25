@@ -119,14 +119,10 @@ module.exports = async (app, services) => {
     }
 
     async function send(msg, to) {
-        if (to === 'gpt') {
-            processGPT(msg, 'gpt')
-        }
-        if (to === 'chatgpt') {
-            processGPT(msg, 'chatgpt')
-        }
         if (to === 'midjourney') {
             processMidjourney(msg)
+        } else {
+            processGPT(msg, to)
         }
     }
 
@@ -160,8 +156,11 @@ module.exports = async (app, services) => {
                 reply_to_message_id: msg.message_id,
                 reply_markup: JSON.stringify({
                     inline_keyboard: [[
-                        {text: 'To GPT', callback_data: 'send:gpt'},
-                        {text: 'To Midjourney', callback_data: 'send:midjourney'}
+                        {text: '→ GPT', callback_data: 'send:gpt'},
+                        {text: '→ chatGPT', callback_data: 'send:chatgpt'},
+                    ], [
+                        {text: '→ Bing', callback_data: 'send:bing'},
+                        {text: '→ Midjourney', callback_data: 'send:midjourney'}
                     ]]
                 })
             })
@@ -174,7 +173,7 @@ module.exports = async (app, services) => {
 
     async function processGPT(msg, type) {
         const space = msg.text.indexOf(' ')
-        type = type || msg.text.startsWith('/') ? msg.text.substring(1, space !== -1 ? space : msg.text.length).trim() : 'gpt'
+        type = type || (msg.text.startsWith('/') ? msg.text.substring(1, space !== -1 ? space : msg.text.length).trim() : 'gpt')
         const request = msg.text.startsWith('/') ? msg.text.substring(space !== -1 ? space : msg.text.length).trim() : msg.text
         const chatId = msg.chat.id
         if (!request) {
@@ -186,11 +185,16 @@ module.exports = async (app, services) => {
         const form = {reply_to_message_id: msg.message_id}
         try {
             const result = await services[type].conversation(request, session[type])
-            const response = result.response
+            let response = result.response
             delete result.response
+            if (type === 'bing') {
+                form.parse_mode = 'Markdown'
+                response = services.bing.createMarkdownText(result.reply)
+                delete result.reply
+            }
             session[type] = result
             sessions.set(chatId, session)
-            bot.sendMessage(chatId, response, Object.assign(form))
+            bot.sendMessage(chatId, response, form)
         } catch (e) {
             const err = e.response ? e.response.data.error.message : e.message
             console.error(`[Telegram] ${err}`)
