@@ -240,6 +240,33 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/GPTConversation'
+    post:
+      summary: Get a response from chatGPT
+      description: |
+        Returns a response from chatGPT given a prompt and conversation ID.
+      tags:
+        - chatGPT
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          description: The JSON payload containing the prompt and conversation ID.
+          required: true
+          schema:
+            type: object
+            properties:
+              prompt:
+                type: string
+                description: The prompt to give chatGPT.
+              conversationId:
+                type: string
+                description: The ID of the conversation with chatGPT.
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/GPTConversation'
   /gpt/conversation:
     get:
       summary: Get a response from GPT model

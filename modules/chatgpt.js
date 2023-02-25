@@ -6,8 +6,8 @@ module.exports = async (app) => {
     const conversations = await redis('chatgpt-conversation')
 
     async function conversation(request, opts = {}) {
-        const conversationId = opts.conversationId
-        console.log(`[chatGPT] "${request}" ${conversationId || ''}`)
+        const conversationId = opts.conversationId || ''
+        console.log(`[chatGPT] "${request}" ${conversationId}`)
         const messageId = conversationId ? await conversations.get(conversationId) : crypto.randomUUID()
         const req = {
             'model': 'text-davinci-002-render-sha',
@@ -40,7 +40,7 @@ module.exports = async (app) => {
                 response: json['message']['content']['parts'][0]
             }
 
-            console.log(`[chatGPT] ${conversationId} "${result.response}"`)
+            console.log(`[chatGPT] ${result.conversationId} "${result.response}"`)
             conversations.set(result.conversationId, json['message']['id'])
             return result
         }
@@ -55,7 +55,14 @@ module.exports = async (app) => {
         try {
             res.send(await conversation(req.query['prompt'], {conversationId: req.query['conversationId']}))
         } catch (e) {
-            console.error(`[ChatGPT] ${e.message}`)
+            res.status(500).send(e.message)
+        }
+    })
+
+    app.post('/chatgpt/conversation', async (req, res) => {
+        try {
+            res.send(await conversation(req.body['prompt'], req.body))
+        } catch (e) {
             res.status(500).send(e.message)
         }
     })

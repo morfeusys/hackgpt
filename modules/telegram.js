@@ -85,11 +85,14 @@ module.exports = async (app, services) => {
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id
         if (msg.text === '/start') {
-            await bot.sendMessage(chatId, 'Hello! I am here to help you somehow...\n\n' +
-                'Send me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
-                'Send /chatgpt yourprompt to talk with chatGPT. Note that it is rate limited.\n\n' +
-                'Send /imagine command to generate a beautiful Midjorney image.\n\n' +
-                'Send a voice note to recognise it through Whisper.'
+            await bot.sendMessage(chatId, '*Hello! I am here to help you somehow...*\n\n' +
+                '*GPT*\nSend me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
+                '*ChatGPT*\nSend /chatgpt _yourprompt_ to talk with chatGPT. Note that it is rate limited.\n\n' +
+                '*Bing*\nSend /bing _yourprompt_ to talk with Bing GPT.\n\n' +
+                '*Midjourney*\nSend /imagine _prompt_ to generate a beautiful Midjorney image.\n\n' +
+                '*Whisper*\nSend a voice note to transcribe it through Whisper ASR.', {
+                    parse_mode: 'Markdown'
+                }
             )
             await bot.sendMessage(chatId, 'That is all I can, sorry...')
         } else if (msg.text === '/reset') {
@@ -170,8 +173,9 @@ module.exports = async (app, services) => {
     }
 
     async function processGPT(msg, type) {
-        type = type || msg.text.startsWith('/') ? msg.text.substring(1, msg.text.indexOf(' ')) : 'gpt'
-        const request = msg.text.startsWith('/') ? msg.text.substring(msg.text.indexOf(' ')).trim() : msg.text
+        const space = msg.text.indexOf(' ')
+        type = type || msg.text.startsWith('/') ? msg.text.substring(1, space !== -1 ? space : msg.text.length).trim() : 'gpt'
+        const request = msg.text.startsWith('/') ? msg.text.substring(space !== -1 ? space : msg.text.length).trim() : msg.text
         const chatId = msg.chat.id
         if (!request) {
             bot.sendMessage(chatId, `Usage: /${type} yourpromtgoeshere`)
