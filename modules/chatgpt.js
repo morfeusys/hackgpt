@@ -5,7 +5,8 @@ const redis = require('./redis.js')
 module.exports = async (app) => {
     const conversations = await redis('chatgpt-conversation')
 
-    async function conversation(request, conversationId) {
+    async function conversation(request, opts = {}) {
+        const conversationId = opts.conversationId
         console.log(`[chatGPT] "${request}" ${conversationId || ''}`)
         const messageId = conversationId ? await conversations.get(conversationId) : crypto.randomUUID()
         const req = {
@@ -52,7 +53,7 @@ module.exports = async (app) => {
 
     app.get('/chatgpt/conversation', async (req, res) => {
         try {
-            res.send(await conversation(req.query['prompt'], req.query['conversationId']))
+            res.send(await conversation(req.query['prompt'], {conversationId: req.query['conversationId']}))
         } catch (e) {
             console.error(`[ChatGPT] ${e.message}`)
             res.status(500).send(e.message)

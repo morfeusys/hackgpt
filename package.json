@@ -16,6 +16,7 @@
     "node-telegram-bot-api": "^0.51.0",
     "redis": "^4.6.4",
     "swagger-ui-express": "^4.6.1",
+    "ws": "^8.12.1",
     "yamljs": "^0.3.0"
   }
 }

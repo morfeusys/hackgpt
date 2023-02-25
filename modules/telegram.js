@@ -4,7 +4,6 @@ const TelegramBot = require('node-telegram-bot-api')
 const token = process.env.TELEGRAM_BOT_TOKEN
 const externalUrl = process.env.EXTERNAL_URL
 const imagineCommand = '/imagine'
-const chatGPTCommand = '/chatgpt'
 
 module.exports = async (app, services) => {
     const sessions = await redis('telegram-session')
@@ -171,24 +170,23 @@ module.exports = async (app, services) => {
     }
 
     async function processGPT(msg, type) {
-        type = type || (msg.text.startsWith(chatGPTCommand) ? 'chatgpt' : 'gpt')
-        const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length).trim() : msg.text
+        type = type || msg.text.startsWith('/') ? msg.text.substring(1, msg.text.indexOf(' ')) : 'gpt'
+        const request = msg.text.startsWith('/') ? msg.text.substring(msg.text.indexOf(' ')).trim() : msg.text
         const chatId = msg.chat.id
         if (!request) {
-            bot.sendMessage(chatId, `Usage: ${chatGPTCommand} yourpromtgoeshere`)
+            bot.sendMessage(chatId, `Usage: /${type} yourpromtgoeshere`)
             return
         }
         const waitingMessage = await sendWaitingMessage(chatId)
         const session = await sessions.get(chatId) || {}
         const form = {reply_to_message_id: msg.message_id}
         try {
-            const conversationId = session[type] ? session[type].conversationId : null
-            const result = await services[type].conversation(request, conversationId)
-            if (!conversationId) {
-                session[type] = {conversationId: result.conversationId}
-                sessions.set(chatId, session)
-            }
-            bot.sendMessage(chatId, result.response, Object.assign(form))
+            const result = await services[type].conversation(request, session[type])
+            const response = result.response
+            delete result.response
+            session[type] = result
+            sessions.set(chatId, session)
+            bot.sendMessage(chatId, response, Object.assign(form))
         } catch (e) {
             const err = e.response ? e.response.data.error.message : e.message
             console.error(`[Telegram] ${err}`)

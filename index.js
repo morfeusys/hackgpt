@@ -5,6 +5,7 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const gpt = require('./modules/gpt.js')
 const chatgpt = require('./modules/chatgpt.js')
+const bing = require('./modules/bing.js')
 const telegram = require('./modules/telegram.js')
 const midjourney = require('./modules/midjourney.js')
 const whisper = require('./modules/whisper.js')
@@ -20,6 +21,7 @@ app.listen(port, async () => {
     telegram(app, {
         chatgpt: await chatgpt(app),
         gpt: await gpt(app),
+        bing: await bing(app),
         midjourney: await midjourney(app),
         whisper: whisper
     })
