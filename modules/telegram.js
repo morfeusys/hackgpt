@@ -88,6 +88,7 @@ module.exports = async (app, services) => {
         if (msg.text === '/start') {
             await bot.sendMessage(chatId, 'Hello! I am here to help you somehow...\n\n' +
                 'Send me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
+                'Send /chatgpt yourprompt to talk with chatGPT. Note that it is rate limited.\n\n' +
                 'Send /imagine command to generate a beautiful Midjorney image.\n\n' +
                 'Send a voice note to recognise it through Whisper.'
             )
@@ -174,7 +175,7 @@ module.exports = async (app, services) => {
         const request = msg.text.startsWith(chatGPTCommand) ? msg.text.substring(chatGPTCommand.length).trim() : msg.text
         const chatId = msg.chat.id
         if (!request) {
-            bot.sendMessage(chatId, `Usage: ${chatGPTCommand} sometextgoeshere`)
+            bot.sendMessage(chatId, `Usage: ${chatGPTCommand} yourpromtgoeshere`)
             return
         }
         const waitingMessage = await sendWaitingMessage(chatId)
@@ -187,12 +188,7 @@ module.exports = async (app, services) => {
                 session[type] = {conversationId: result.conversationId}
                 sessions.set(chatId, session)
             }
-            bot.sendMessage(chatId, result.response, Object.assign(form, {
-                parse_mode: 'Markdown',
-                reply_markup: JSON.stringify({
-                    inline_keyboard: [[{text: 'To Midjourney', callback_data: 'send:midjourney'}]]
-                })
-            }))
+            bot.sendMessage(chatId, result.response, Object.assign(form))
         } catch (e) {
             const err = e.response ? e.response.data.error.message : e.message
             console.error(`[Telegram] ${err}`)

@@ -10,7 +10,10 @@ module.exports = async (app) => {
     const conversations = await redis('gpt-conversation')
 
     async function complete(data) {
-        return await axios.post('https://api.openai.com/v1/engines/text-davinci-003/completions', data, {
+        data = Object.assign({
+            "model": "text-davinci-003",
+        }, data)
+        return await axios.post('https://api.openai.com/v1/completions', data, {
             headers: {
                 Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
             }
@@ -49,7 +52,7 @@ module.exports = async (app) => {
             tokens = data['max_tokens']
         }
         data = Object.assign(data, {
-            //"model": "text-davinci-003",
+            "model": "text-davinci-003",
             "max_tokens": tokens,
             "best_of": 1,
             "echo": false,
