@@ -3,10 +3,13 @@ const swaggerUi = require("swagger-ui-express")
 const YAML = require('yamljs')
 const cors = require('cors')
 const bodyParser = require('body-parser')
+const requestIp = require('request-ip')
 const services = require('./modules/services.js')
 const telegram = require('./modules/telegram.js')
 
 const app = express()
+
+app.use(requestIp.mw())
 app.use(bodyParser.json())
 app.use(cors({origin: '*'}))
 app.use(`/api`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))

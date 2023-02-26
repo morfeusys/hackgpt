@@ -4,6 +4,8 @@ const bing = require('./bing.js')
 const midjourney = require('./midjourney.js')
 const whisper = require('./whisper.js')
 
+const requests = {}
+
 module.exports = async (app) => {
     const gptServices = {
         gpt: await gpt(app),
@@ -15,6 +17,11 @@ module.exports = async (app) => {
         const type = req.params['type']
         const service = gptServices[type]
         if (service) {
+            if (requests[req.clientIp]) {
+                res.status(403).send('Please await your previous request to complete')
+                return
+            }
+            requests[req.clientIp] = new Date().getTime()
             try {
                 const prompt = req.query['prompt'] || req.body['prompt']
                 const conversationId = req.query['conversation'] || req.body['conversation']
@@ -25,6 +32,8 @@ module.exports = async (app) => {
                 })
             } catch (e) {
                 res.status(500).send(e.message)
+            } finally {
+                delete requests[req.clientIp]
             }
         } else {
             res.status(404).send(`${type} GPT service was not found`)
