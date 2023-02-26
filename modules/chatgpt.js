@@ -2,12 +2,11 @@ const axios = require('axios')
 const crypto = require('crypto')
 const redis = require('./redis.js')
 
-module.exports = async (app) => {
+module.exports = async () => {
     const conversations = await redis('chatgpt-conversation')
 
-    async function conversation(request, opts = {}) {
-        const conversationId = opts.conversationId || ''
-        console.log(`[chatGPT] "${request}" ${conversationId}`)
+    async function conversation(request, conversationId) {
+        console.log(`[chatGPT] "${request}" ${conversationId || ''}`)
         const messageId = conversationId ? await conversations.get(conversationId) : crypto.randomUUID()
         const req = {
             'model': 'text-davinci-002-render-sha',
@@ -50,22 +49,6 @@ module.exports = async (app) => {
             throw new Error(detail['message'] ? detail['message'] : detail)
         }
     }
-
-    app.get('/chatgpt/conversation', async (req, res) => {
-        try {
-            res.send(await conversation(req.query['prompt'], {conversationId: req.query['conversationId']}))
-        } catch (e) {
-            res.status(500).send(e.message)
-        }
-    })
-
-    app.post('/chatgpt/conversation', async (req, res) => {
-        try {
-            res.send(await conversation(req.body['prompt'], req.body))
-        } catch (e) {
-            res.status(500).send(e.message)
-        }
-    })
 
     return {
         conversation: conversation

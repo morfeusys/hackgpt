@@ -186,13 +186,10 @@ module.exports = async (app, services) => {
         try {
             const result = await services[type].conversation(request, session[type])
             let response = result.response
-            delete result.response
             if (type === 'bing') {
                 form.parse_mode = 'Markdown'
-                response = services.bing.createMarkdownText(result.reply)
-                delete result.reply
             }
-            session[type] = result
+            session[type] = result.conversationId
             sessions.set(chatId, session)
             bot.sendMessage(chatId, response, form)
         } catch (e) {

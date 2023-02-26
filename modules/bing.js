@@ -1,3 +1,4 @@
+const redis = require('./redis.js')
 const crypto = require('crypto')
 const WebSocket = require('ws')
 const axios = require('axios')
@@ -18,7 +19,8 @@ function createMarkdownText(reply) {
     return reply.text
 }
 
-module.exports = (app) => {
+module.exports = async () => {
+    const conversations = await redis('bing-conversation')
 
     async function createNewConversation() {
         const response = await axios('https://www.bing.com/turing/conversation/create', {
@@ -104,19 +106,15 @@ module.exports = (app) => {
         ws.removeAllListeners()
     }
 
-    async function sendMessage(message, opts = {}) {
-        console.log(`[Bing] "${message}" ${opts.conversationId || ''}`)
+    async function sendMessage(message, cid) {
+        console.log(`[Bing] "${message}" ${cid || ''}`)
+        let conversation = cid ? await conversations.get(cid) : {}
         let {
             conversationSignature,
             conversationId,
             clientId,
             invocationId = 0,
-            onProgress,
-        } = opts;
-
-        if (typeof onProgress !== 'function') {
-            onProgress = () => {};
-        }
+        } = conversation;
 
         if (!conversationSignature || !conversationId || !clientId) {
             const createNewConversationResponse = await createNewConversation();
@@ -194,9 +192,6 @@ module.exports = (app) => {
                         if (!updatedText || updatedText === replySoFar) {
                             return;
                         }
-                        // get the difference between the current text and the previous text
-                        const difference = updatedText.substring(replySoFar.length);
-                        onProgress(difference);
                         replySoFar = updatedText;
                         return;
                     case 2:
@@ -246,38 +241,18 @@ module.exports = (app) => {
             conversationId,
             clientId,
             invocationId: invocationId + 1,
-            conversationExpiryTime,
-            response: reply.text,
-            reply: reply
+            conversationExpiryTime
         };
 
-        console.log(`[Bing] ${result.conversationId} "${result.response}"`)
-        return result
+        console.log(`[Bing] ${result.conversationId} "${reply.text}"`)
+        conversations.set(conversationId, result)
+        return {
+            response: createMarkdownText(reply),
+            conversationId: conversationId
+        }
     }
 
-    app.post('/bing/conversation', async (req, res) => {
-        try {
-            res.send(await sendMessage(req.body['prompt'], req.body['options']))
-        } catch (e) {
-            res.status(500).send(e.message)
-        }
-    })
-
-    app.get('/bing/conversation', async (req, res) => {
-        try {
-            res.send(await sendMessage(req.query['prompt'], {
-                conversationId: req.query['conversationId'],
-                conversationSignature: req.query['conversationSignature'],
-                clientId: req.query['clientId'],
-                invocationId: req.query['invocationId'] ? parseInt(req.query['invocationId']) : 0
-            }))
-        } catch (e) {
-            res.status(500).send(e.message)
-        }
-    })
-
     return {
-        conversation: sendMessage,
-        createMarkdownText: createMarkdownText
+        conversation: sendMessage
     }
 }

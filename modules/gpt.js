@@ -20,8 +20,7 @@ module.exports = async (app) => {
         })
     }
 
-    async function conversation(request, session = {}, options = {}) {
-        let conversationId = session.conversationId
+    async function conversation(request, conversationId, options = {}) {
         console.log(`[GPT] "${request}" ${conversationId || ''}`)
         conversationId = conversationId || crypto.randomUUID()
         let conversation = await conversations.get(conversationId)
@@ -76,24 +75,6 @@ module.exports = async (app) => {
     app.post('/gpt/complete', async (req, res) => {
         try {
             res.send((await complete(req.body)).data)
-        } catch (e) {
-            console.error(`[GPT] ${e.message}`)
-            res.status(500).send(e.message)
-        }
-    })
-
-    app.get('/gpt/conversation', async (req, res) => {
-        try {
-            res.send(await conversation(req.query['prompt'], {conversationId: req.query['conversationId']}))
-        } catch (e) {
-            console.error(`[GPT] ${e.message}`)
-            res.status(500).send(e.message)
-        }
-    })
-
-    app.post('/gpt/conversation', async (req, res) => {
-        try {
-            res.send(await conversation(req.body['prompt'], {conversationId: req.body['conversationId']}, req.body['options']))
         } catch (e) {
             console.error(`[GPT] ${e.message}`)
             res.status(500).send(e.message)
