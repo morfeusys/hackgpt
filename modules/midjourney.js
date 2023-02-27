@@ -137,7 +137,7 @@ async function startClient() {
     }
 
     return {
-        onJobComplete: listener => listeners.push(listener),
+        onTaskComplete: listener => listeners.push(listener),
         getJob: jobs.get,
         runAction: async (imageId, actionId) => {
             const msg = await channel.messages.fetch(imageId)
@@ -170,7 +170,7 @@ module.exports = async (app) => {
         let prompt = req.query['prompt']
         let upscale = !!req.query['upscale']
         if (!prompt || !prompt.trim()) {
-            res.sendStatus(400)
+            res.status(400).send('prompt parameter is required')
         } else {
             const job = await client.runJob({
                 prompt: prompt,
@@ -179,22 +179,22 @@ module.exports = async (app) => {
             if (job) {
                 res.send(job)
             } else {
-                res.sendStatus(500)
+                res.status(500).send('cannot create a new job with this prompt')
             }
         }
     })
 
     app.get('/midjourney/action', async (req, res) => {
-        let imageId = req.query['imageId']
-        let actionId = req.query['actionId']
+        let imageId = req.query['image']
+        let actionId = req.query['action']
         if (!imageId || !actionId) {
-            res.sendStatus(400)
+            res.status(400).send('image and action parameters should be provided')
         } else {
             const job = await client.runAction(imageId, actionId)
             if (job) {
                 res.send(job)
             } else {
-                res.sendStatus(500)
+                res.status(500).send('cannot run action')
             }
         }
     })

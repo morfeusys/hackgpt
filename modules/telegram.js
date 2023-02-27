@@ -24,7 +24,7 @@ module.exports = async (app, services) => {
         bot.deleteWebHook()
     }
 
-    services.midjourney.onJobComplete(async (job) => {
+    services.midjourney.onTaskComplete(async (job) => {
         if (!job.images || !job.images.length) return
         const image = job.images[job.images.length - 1]
         const messages = await jobMessages.get(job.id)
