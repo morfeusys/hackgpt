@@ -1,5 +1,6 @@
 const redis = require('./redis.js')
 const TelegramBot = require('node-telegram-bot-api')
+const image = require('./image.js')
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 const externalUrl = process.env.EXTERNAL_URL
@@ -89,7 +90,8 @@ module.exports = async (app, services) => {
                 '*GPT*\nSend me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
                 '*ChatGPT*\nSend /chatgpt _yourprompt_ to talk with chatGPT. Note that it is rate limited.\n\n' +
                 '*Bing*\nSend /bing _yourprompt_ to talk with Bing GPT.\n\n' +
-                '*Midjourney*\nSend /imagine _prompt_ to generate a beautiful Midjorney image.\n\n' +
+                '*Midjourney*\nSend /imagine _prompt_ to generate a beautiful Midjorney image.\n' +
+                'You can also _send me any photo_ with optional caption to create a new image or generate a prompt for it\n\n' +
                 '*Whisper*\nSend a voice note to transcribe it through Whisper ASR.', {
                     parse_mode: 'Markdown'
                 }
@@ -121,6 +123,8 @@ module.exports = async (app, services) => {
     async function send(msg, to) {
         if (to === 'midjourney') {
             processMidjourney(msg)
+        } else if (to === 'interrogate') {
+            processInterrogate(msg)
         } else {
             processGPT(msg, to)
         }
@@ -133,7 +137,18 @@ module.exports = async (app, services) => {
             processWhisper(msg)
         } else if (msg.text) {
             processGPT(msg)
+        } else if (msg.photo) {
+            processPhoto(msg)
         }
+    }
+
+    function processPhoto(msg) {
+        bot.sendMessage(msg.chat.id, 'What would you like to do with this photo?', {
+            reply_to_message_id: msg.message_id,
+            reply_markup: JSON.stringify({
+                inline_keyboard: [[{text: '→ Midjourney', callback_data: 'send:midjourney'}, {text: 'Get prompt', callback_data: 'send:interrogate'}]]
+            })
+        })
     }
 
     async function processWhisper(msg) {
@@ -206,13 +221,45 @@ module.exports = async (app, services) => {
         }
     }
 
+    async function processInterrogate(msg) {
+        if (msg.reply_to_message && msg.reply_to_message.photo) {
+            const chatId = msg.chat.id
+            const awaitMessage = await sendWaitingMessage(chatId)
+            const photo = msg.reply_to_message.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
+            let prompt
+            try {
+                prompt = await services.sd.interrogate(await bot.getFileStream(photo.file_id))
+            } catch (e) {
+                prompt = e.message
+            }
+            await bot.deleteMessage(chatId, awaitMessage.message_id)
+            bot.sendMessage(chatId, prompt, {
+                reply_to_message_id: msg.reply_to_message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[{text: '→ Midjourney', callback_data: 'send:midjourney'}]]
+                })
+            })
+        }
+    }
+
     async function processMidjourney(msg, actionId) {
         const chatId = msg.chat.id
         let job
-        if (msg.text) {
+        if (msg.reply_to_message && msg.reply_to_message.photo) {
+            const awaitMessage = await sendWaitingMessage(chatId)
+            const photo = msg.reply_to_message.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
+            const link = await image.getLink(await bot.getFileStream(photo.file_id))
+            const prompt = link + ' ' + (msg.reply_to_message.caption || '')
+            job = await services.midjourney.runJob({prompt: prompt})
+            bot.deleteMessage(chatId, awaitMessage.message_id)
+        } else if (msg.text) {
             const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
             if (!prompt) {
-                bot.sendMessage(chatId, 'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)', {parse_mode: 'Markdown'})
+                bot.sendMessage(chatId,
+                    'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)\n\n' +
+                    '_Also you can send me some photo with optional caption to create a new image. Just try!_', {
+                    parse_mode: 'Markdown'
+                })
                 return
             } else {
                 job = await services.midjourney.runJob({prompt: prompt})
