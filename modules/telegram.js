@@ -234,10 +234,7 @@ module.exports = async (app, services) => {
             }
             await bot.deleteMessage(chatId, awaitMessage.message_id)
             bot.sendMessage(chatId, prompt, {
-                reply_to_message_id: msg.reply_to_message.message_id,
-                reply_markup: JSON.stringify({
-                    inline_keyboard: [[{text: '→ Midjourney', callback_data: 'send:midjourney'}]]
-                })
+                reply_to_message_id: msg.reply_to_message.message_id
             })
         }
     }
