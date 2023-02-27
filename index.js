@@ -12,7 +12,7 @@ const app = express()
 app.use(requestIp.mw())
 app.use(bodyParser.json())
 app.use(cors({origin: '*'}))
-app.use(`/api`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))
+app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))
 
 const port = process.env.PORT || 8000
 app.listen(port, async () => {
