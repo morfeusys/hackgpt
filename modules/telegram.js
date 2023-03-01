@@ -91,7 +91,7 @@ module.exports = async (app, services) => {
                 '*ChatGPT*\nSend /chatgpt _yourprompt_ to talk with chatGPT. Note that it is rate limited.\n\n' +
                 '*Bing*\nSend /bing _yourprompt_ to talk with Bing GPT.\n\n' +
                 '*Midjourney*\nSend /imagine _prompt_ to generate a beautiful Midjorney image.\n' +
-                'You can also _send me any photo_ with optional caption to create a new image or generate a prompt for it\n\n' +
+                'You can also _send me any photo_ with optional caption to create a new image or generate a prompt for it.\n\n' +
                 '*Whisper*\nSend a voice note to transcribe it through Whisper ASR.', {
                     parse_mode: 'Markdown'
                 }
@@ -122,9 +122,9 @@ module.exports = async (app, services) => {
 
     async function send(msg, to) {
         if (to === 'midjourney') {
-            processMidjourney(msg)
+            processMidjourney(msg.reply_to_message && msg.reply_to_message.photo ? msg.reply_to_message : msg)
         } else if (to === 'interrogate') {
-            processInterrogate(msg)
+            processInterrogate(msg.reply_to_message)
         } else {
             processGPT(msg, to)
         }
@@ -222,49 +222,55 @@ module.exports = async (app, services) => {
     }
 
     async function processInterrogate(msg) {
-        if (msg.reply_to_message && msg.reply_to_message.photo) {
-            const chatId = msg.chat.id
-            const awaitMessage = await sendWaitingMessage(chatId)
-            const photo = msg.reply_to_message.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
-            let prompt
-            try {
-                prompt = await services.sd.interrogate(await bot.getFileStream(photo.file_id))
-            } catch (e) {
-                prompt = e.message
-            }
-            await bot.deleteMessage(chatId, awaitMessage.message_id)
-            bot.sendMessage(chatId, prompt, {
-                reply_to_message_id: msg.reply_to_message.message_id
+        if (!msg.photo) return
+        const chatId = msg.chat.id
+        const awaitMessage = await sendWaitingMessage(chatId)
+        const photo = msg.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
+        try {
+            const prompt = await services.sd.interrogate(await bot.getFileStream(photo.file_id))
+            bot.sendPhoto(chatId, photo.file_id, {
+                caption: prompt,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[{text: '→ Midjourney', callback_data: 'send:midjourney'}]]
+                })
+            })
+        } catch (e) {
+            bot.sendMessage(chatId, `Sorry, I cannot create a prompt for this photo...\n\n${e.message}`, {
+                reply_to_message_id: msg.message_id
             })
         }
+        bot.deleteMessage(chatId, awaitMessage.message_id)
     }
 
     async function processMidjourney(msg, actionId) {
         const chatId = msg.chat.id
         let job
-        if (msg.reply_to_message && msg.reply_to_message.photo) {
+        if (actionId) {
+            const imageId = await images.get(msg.message_id)
+            if (imageId) {
+                job = await services.midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
+            }
+        } else if (msg.photo) {
             const awaitMessage = await sendWaitingMessage(chatId)
-            const photo = msg.reply_to_message.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
+            const photo = msg.photo.sort((a,b) => b.width*b.height - a.width*a.height)[0]
             const link = await image.getLink(await bot.getFileStream(photo.file_id))
-            const prompt = link + ' ' + (msg.reply_to_message.caption || '')
+            const prompt = link + ' ' + (msg.caption || '')
             job = await services.midjourney.runJob({prompt: prompt})
             bot.deleteMessage(chatId, awaitMessage.message_id)
         } else if (msg.text) {
             const prompt = msg.text.startsWith(imagineCommand) ? msg.text.substring(imagineCommand.length).trim() : msg.text
             if (!prompt) {
                 bot.sendMessage(chatId,
-                    'Use /imagine as described [here](https://docs.midjourney.com/docs/prompts)\n\n' +
-                    '_Also you can send me some photo with optional caption to create a new image. Just try!_', {
-                    parse_mode: 'Markdown'
-                })
+                    'Use /imagine as described [in Midjourney docs](https://docs.midjourney.com/docs/prompts)\n' +
+                    'For example _/imagine something beautiful_\n\n' +
+                    '_Also you can send me some photo with optional caption to create a new image. Just try!_',
+                    {
+                        parse_mode: 'Markdown',
+                        disable_web_page_preview: true
+                    })
                 return
             } else {
                 job = await services.midjourney.runJob({prompt: prompt})
-            }
-        } else if (actionId) {
-            const imageId = await images.get(msg.message_id)
-            if (imageId) {
-                job = await services.midjourney.runAction(imageId, `MJ::JOB::${actionId}`)
             }
         }
 

@@ -1,5 +1,4 @@
 const axios = require('axios')
-const FormData = require('form-data')
 const concat = require('concat-stream')
 const { Base64Encode } = require('base64-stream')
 
@@ -20,16 +19,18 @@ function toBase64(stream) {
     })
 }
 
+function fromBase64(base64) {
+    return Buffer.from(base64, 'base64')
+}
+
 module.exports = {
     toBase64: toBase64,
+    fromBase64: fromBase64,
     getLink: async (stream) => {
-        const base64 = await toBase64(stream)
-        const data = new FormData()
-        data.append('image', base64)
-        const resp = await axios.post('https://api.imgur.com/3/image', data, {
+        const resp = await axios.post('https://api.imgur.com/3/image', stream, {
             headers: Object.assign({
                 'Authorization': `Client-ID ${process.env.IMGUR_CLIENT_ID}`
-            }, data.getHeaders())
+            })
         })
         return resp.data['success'] === true ? resp.data['data']['link'] : null
     }

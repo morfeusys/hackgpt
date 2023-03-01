@@ -1,3 +1,4 @@
+const axios = require('axios')
 const express = require('express')
 const swaggerUi = require("swagger-ui-express")
 const YAML = require('yamljs')
@@ -13,6 +14,12 @@ app.use(requestIp.mw())
 app.use(bodyParser.json())
 app.use(cors({origin: '*'}))
 app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))
+
+axios.interceptors.request.use(request => {
+    request.maxContentLength = Infinity;
+    request.maxBodyLength = Infinity;
+    return request;
+})
 
 const port = process.env.PORT || 8000
 app.listen(port, async () => {
