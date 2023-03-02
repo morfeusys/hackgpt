@@ -3,16 +3,13 @@ const crypto = require('crypto')
 const axios = require('axios')
 const { encode } = require('gpt-3-encoder')
 
-const preamble = "You are ChatGPT, a large language model trained by OpenAI."
+const preamble = "You are GPT, a language model trained by OpenAI."
 const maxTokens = 4000
 
 module.exports = async (app) => {
-    const conversations = await redis('gpt-conversation')
+    const conversations = await redis('gpt-conversations')
 
     async function complete(data) {
-        data = Object.assign({
-            "model": "text-davinci-003",
-        }, data)
         return await axios.post('https://api.openai.com/v1/completions', data, {
             headers: {
                 Authorization: `Bearer ${process.env.OPENAI_API_KEY}`

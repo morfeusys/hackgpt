@@ -10,8 +10,53 @@ tags:
     description: Image generation with Midjourney
   - name: Stable Diffusion
     description: Image generation and image utils with Stable Diffusion
+  - name: Whisper
+    description: Speech to text with OpenAI Whisper
 paths:
   "/{service}/chat":
+    post:
+      summary: Get a chat conversation with GPT service
+      description: |
+        Returns a response from GPT service given a prompt, conversation ID and options.
+      tags:
+        - GPT
+      parameters:
+        - name: service
+          in: path
+          description: A GPT service to use.
+          required: true
+          schema:
+            type: string
+            enum:
+              - chatgpt
+              - bing
+              - gpt
+            default: chatgpt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  required: true
+                  description: The prompt to give GPT service.
+                  default: ''
+                conversation:
+                  type: string
+                  description: The ID of the conversation with GPT service.
+                  default: ''
+                options:
+                  type: object
+                  description: Additional options to pass to GPT.
+      responses:
+        200:
+          description: GPT service response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GPTConversation"
     get:
       summary: Get a chat conversation with GPT service
       description: |
@@ -26,10 +71,10 @@ paths:
           schema:
             type: string
             enum:
-              - gpt
               - chatgpt
               - bing
-            default: gpt
+              - gpt
+            default: chatgpt
         - name: prompt
           in: query
           description: The prompt to give GPT service.
@@ -107,6 +152,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GPTCompletion"
+  /whisper/transcribe:
+    post:
+      summary: Transcribes a speech with selected language
+      tags:
+        - Whisper
+      parameters:
+        - name: language
+          in: query
+          description: A language of speech. Do not send to detect automatically.
+          schema:
+            type: string
+            default: ''
+      requestBody:
+        description: A speech to transcribe
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        200:
+          description: A text of transctibed speech
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /midjourney/imagine:
     get:
       summary: Generate Midjourney images based on a given prompt

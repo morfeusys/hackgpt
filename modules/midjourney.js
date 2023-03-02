@@ -36,8 +36,8 @@ function callJobListeners(job) {
 }
 
 async function startClient() {
-    const jobs = await redis('midjourney-job')
-    const queue = await redis('mj-task')
+    const jobs = await redis('midjourney-jobs')
+    const queue = await redis('midjourney-tasks')
 
     let lastRun = 0
     let channel

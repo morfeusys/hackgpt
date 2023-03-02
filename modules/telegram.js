@@ -87,9 +87,8 @@ module.exports = async (app, services) => {
         const chatId = msg.chat.id
         if (msg.text === '/start') {
             await bot.sendMessage(chatId, '*Hello! I am here to help you somehow...*\n\n' +
-                '*GPT*\nSend me a text message to talk to GPT. And use /reset once you\'d like to restart a conversation.\n\n' +
-                '*ChatGPT*\nSend /chatgpt _yourprompt_ to talk with chatGPT. Note that it is rate limited.\n\n' +
-                '*Bing*\nSend /bing _yourprompt_ to talk with Bing GPT.\n\n' +
+                '*chatGPT*\nSend me a text message to talk to chatGPT. And use /reset once you\'d like to restart a conversation.\n\n' +
+                '*Bing*\nSend /bing _yourprompt_ to talk with Bing GPT-4.\n\n' +
                 '*Midjourney*\nSend /imagine _prompt_ to generate a beautiful Midjorney image.\n' +
                 'You can also _send me any photo_ with optional caption to create a new image or generate a prompt for it.\n\n' +
                 '*Whisper*\nSend a voice note to transcribe it through Whisper ASR.', {
@@ -171,10 +170,9 @@ module.exports = async (app, services) => {
                 reply_to_message_id: msg.message_id,
                 reply_markup: JSON.stringify({
                     inline_keyboard: [[
-                        {text: '→ GPT', callback_data: 'send:gpt'},
                         {text: '→ chatGPT', callback_data: 'send:chatgpt'},
+                        {text: '→ Bing', callback_data: 'send:bing'}
                     ], [
-                        {text: '→ Bing', callback_data: 'send:bing'},
                         {text: '→ Midjourney', callback_data: 'send:midjourney'}
                     ]]
                 })
@@ -188,9 +186,14 @@ module.exports = async (app, services) => {
 
     async function processGPT(msg, type) {
         const space = msg.text.indexOf(' ')
-        type = type || (msg.text.startsWith('/') ? msg.text.substring(1, space !== -1 ? space : msg.text.length).trim() : 'gpt')
+        type = type || (msg.text.startsWith('/') ? msg.text.substring(1, space !== -1 ? space : msg.text.length).trim() : 'chatgpt')
         const request = msg.text.startsWith('/') ? msg.text.substring(space !== -1 ? space : msg.text.length).trim() : msg.text
         const chatId = msg.chat.id
+        const service = services[type]
+        if (!service) {
+            bot.sendMessage(chatId, '⚠️ I do not know such GPT service...')
+            return
+        }
         if (!request) {
             bot.sendMessage(chatId, `Usage: /${type} yourpromtgoeshere`)
             return
@@ -199,7 +202,7 @@ module.exports = async (app, services) => {
         const session = await sessions.get(chatId) || {}
         const form = {reply_to_message_id: msg.message_id}
         try {
-            const result = await services[type].conversation(request, session[type])
+            const result = await service.conversation(request, session[type])
             let response = result.response
             if (type === 'bing') {
                 form.parse_mode = 'Markdown'

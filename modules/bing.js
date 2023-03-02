@@ -20,7 +20,7 @@ function createMarkdownText(reply) {
 }
 
 module.exports = async () => {
-    const conversations = await redis('bing-conversation')
+    const conversations = await redis('bing-conversations')
 
     async function createNewConversation() {
         const response = await axios('https://www.bing.com/turing/conversation/create', {

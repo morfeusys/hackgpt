@@ -26,7 +26,7 @@ module.exports = async (app) => {
             try {
                 const prompt = req.query['prompt'] || req.body['prompt']
                 const conversationId = req.query['conversation'] || req.body['conversation']
-                const result = await service.conversation(prompt, conversationId)
+                const result = await service.conversation(prompt, conversationId, req.body['options'])
                 res.send({
                     text: result.response,
                     conversation: result.conversationId
@@ -44,6 +44,6 @@ module.exports = async (app) => {
     return Object.assign({
         midjourney: await midjourney(app),
         sd: sd(app),
-        whisper: whisper
+        whisper: whisper(app)
     }, gptServices)
 }
