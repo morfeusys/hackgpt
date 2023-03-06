@@ -11,7 +11,7 @@ const telegram = require('./modules/telegram.js')
 const app = express()
 
 app.use(requestIp.mw())
-app.use(bodyParser.json())
+app.use(bodyParser.json({limit: '10mb'}))
 app.use(cors({origin: '*'}))
 app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(YAML.load('swagger.yaml')))
 
