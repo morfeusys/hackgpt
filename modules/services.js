@@ -18,10 +18,12 @@ module.exports = async (app) => {
         const type = req.params['type']
         const service = gptServices[type]
         if (service) {
-            // if (requests[req.clientIp]) {
-            //     res.status(403).send('Please await your previous request to complete')
-            //     return
-            // }
+            const now = new Date().getTime()
+            const last = requests[req.clientIp] || 0
+            if (now - last < 5000) {
+                res.status(403).send('Please await your previous request to complete')
+                return
+            }
             requests[req.clientIp] = new Date().getTime()
             try {
                 const prompt = req.query['prompt'] || req.body['prompt']
