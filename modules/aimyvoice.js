@@ -1,6 +1,6 @@
 const qs = require('qs')
 const axios = require('axios')
-const config = require('../aimyvoice.json')
+const config = require('./aimyvoice.json')
 
 async function synthesize(text, voice) {
     const token = config.voices[voice]
