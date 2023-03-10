@@ -4,6 +4,7 @@ const bing = require('./bing.js')
 const midjourney = require('./midjourney.js')
 const sd = require('./sd.js')
 const whisper = require('./whisper.js')
+const aimyvoice = require('./aimyvoice.js')
 
 const requests = {}
 
@@ -46,6 +47,7 @@ module.exports = async (app) => {
     return Object.assign({
         midjourney: await midjourney(app),
         sd: sd(app),
-        whisper: whisper(app)
+        whisper: whisper(app),
+        aimyvoice: aimyvoice(app)
     }, gptServices)
 }

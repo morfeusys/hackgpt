@@ -12,6 +12,8 @@ tags:
     description: Image generation and image utils with Stable Diffusion
   - name: Whisper
     description: Speech to text with OpenAI Whisper
+  - name: Aimyvoice
+    description: Text to speech with JustAI Aimyvoice
 paths:
   "/{service}/chat":
     post:
@@ -178,7 +180,84 @@ paths:
             text/plain:
               schema:
                 type: string
-
+  /aimyvoice/synthesize:
+    get:
+      summary: Synthesises text to speech with selected voice
+      tags:
+        - Aimyvoice
+      parameters:
+        - name: text
+          in: query
+          description: Text to synthesise.
+          required: true
+          schema:
+            type: string
+            default: ''
+        - name: voice
+          in: query
+          description: A voice of synthesis.
+          required: true
+          schema:
+            type: string
+            enum:
+              - Крош
+              - Никита
+              - Маруся
+              - Мальчик
+              - Татьяна
+              - Бабуля
+              - Ирина
+              - Мишка
+              - Девочка
+              - Татьяна Литвинова
+              - Ленин
+              - Дедушка
+              - Дед Мороз
+              - Елена
+              - Регина
+              - Роман
+              - Савелий
+              - Женя
+              - Валерий
+              - Василий
+              - Андрей
+              - Татьяна (для рекламы)
+      responses:
+        200:
+          description: A resulting WAV sound
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+    post:
+      summary: Synthesises text to speech with selected voice
+      tags:
+        - Aimyvoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  required: true
+                  description: Text to synthesise.
+                  default: ''
+                voice:
+                  type: string
+                  required: true
+                  description: A voice of synthesis.
+                  default: 'Крош'
+      responses:
+        200:
+          description: A resulting WAV sound
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
   /midjourney/imagine:
     get:
       summary: Generate Midjourney images based on a given prompt
