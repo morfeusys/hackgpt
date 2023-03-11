@@ -30,7 +30,7 @@ module.exports = (app) => {
             })
             response.data.pipe(res)
         } catch (e) {
-            console.error(`Cannot synthesise ${e.message}`)
+            console.error(`Cannot synthesise [${req.query['text']}] ${e.message}`)
             res.status(500).send(e.message)
         }
     })
@@ -43,7 +43,7 @@ module.exports = (app) => {
             })
             response.data.pipe(res)
         } catch (e) {
-            console.error(`Cannot synthesise ${e.message}`)
+            console.error(`Cannot synthesise [${req.body['text']}] ${e.message}`)
             res.status(500).send(e.message)
         }
     })
