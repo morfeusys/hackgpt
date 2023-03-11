@@ -9,6 +9,7 @@ async function synthesize(text, voice) {
     if (!text) throw new Error('text is empty')
     if (text.length < 4 || text.length > 250) throw new Error('text must be from 4 to 250 symbols length')
 
+    console.log(`[Aimyvoice] Synthesising [${text}] with voice [${voice}]`)
     return await axios.post('https://aimyvoice.com/api/v1/synthesize', qs.stringify({
         text: text
     }), {
@@ -29,6 +30,7 @@ module.exports = (app) => {
             })
             response.data.pipe(res)
         } catch (e) {
+            console.error(`Cannot synthesise ${e.message}`)
             res.status(500).send(e.message)
         }
     })
@@ -41,6 +43,7 @@ module.exports = (app) => {
             })
             response.data.pipe(res)
         } catch (e) {
+            console.error(`Cannot synthesise ${e.message}`)
             res.status(500).send(e.message)
         }
     })
