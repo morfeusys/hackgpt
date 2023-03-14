@@ -7,7 +7,7 @@ async function synthesize(text, voice) {
     text = text.trim()
     if (!token) throw new Error(`voice [${voice}] was not found`)
     if (!text) throw new Error('text is empty')
-    if (text.length < 4 || text.length > 250) throw new Error('text must be from 4 to 250 symbols length')
+    if (text.length < 4 || text.length > 500) throw new Error('text must be from 4 to 500 symbols length')
 
     console.log(`[Aimyvoice] Synthesising [${text}] with voice [${voice}]`)
     return await axios.post('https://aimyvoice.com/api/v1/synthesize', qs.stringify({
