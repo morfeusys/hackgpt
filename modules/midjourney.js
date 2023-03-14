@@ -119,7 +119,7 @@ async function startClient() {
     async function runTask(task) {
         if (task && channel) {
             console.log(`[Midjourney] running ${JSON.stringify(task)}`)
-            if (task.prompt) {
+            if (task.prompt && !task.prompt.startsWith('test')) {
                 try {
                     await channel.sendSlash(midjourneyBotId, 'imagine', task.prompt)
                 } catch (e) {
@@ -151,7 +151,7 @@ async function startClient() {
         },
         runJob: async (job) => {
             //job.prompt = badWordsFilter.clean(job.prompt).trim()
-            if (job.prompt === 'test') throw new Error('do not test me')
+            if (job.prompt.startsWith('test')) throw new Error('do not test me')
             job = Object.assign(job, {id: crypto.randomBytes(10).toString('hex'), tasks: 1, images: []})
             job.prompt = job.prompt.replaceAll("—", '--')
             let cidx = job.prompt.indexOf('--')
