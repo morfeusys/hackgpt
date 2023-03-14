@@ -26,15 +26,17 @@ module.exports = async (app) => {
             //     return
             // }
             requests[req.clientIp] = new Date().getTime()
+            const prompt = req.query['prompt'] || req.body['prompt']
+            const conversationId = req.query['conversation'] || req.body['conversation']
             try {
-                const prompt = req.query['prompt'] || req.body['prompt']
-                const conversationId = req.query['conversation'] || req.body['conversation']
+                console.log(`Requesting [${type}] with [${prompt}]`)
                 const result = await service.conversation(prompt, conversationId, req.body['options'])
                 res.send({
                     text: result.response,
                     conversation: result.conversationId
                 })
             } catch (e) {
+                console.error(`Cannot process [${prompt}]`, e.message)
                 res.status(500).send(e.message)
             } finally {
                 delete requests[req.clientIp]
