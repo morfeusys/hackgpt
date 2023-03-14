@@ -2,25 +2,25 @@ const fs = require('fs')
 const readline = require('readline')
 const redis = require('./redis.js')
 const crypto = require('crypto')
-const badWords = require('bad-words')
+//const badWords = require('bad-words')
 const { Client } = require('discord.js-selfbot-v13')
 
 const midjourneyBotId = '936929561302675456'
 const listeners = []
 const errorMessages = ['Invalid', 'Banned']
-const badWordsFilter = new badWords({
-    placeHolder: ' '
-});
+// const badWordsFilter = new badWords({
+//     placeHolder: ' '
+// });
 
-(async () => {
-    const rl = readline.createInterface({
-        input: fs.createReadStream('stopwords.txt'),
-        crlfDelay: Infinity
-    })
-    for await (const line of rl) {
-        badWordsFilter.addWords(line)
-    }
-})()
+// (async () => {
+//     const rl = readline.createInterface({
+//         input: fs.createReadStream('stopwords.txt'),
+//         crlfDelay: Infinity
+//     })
+//     for await (const line of rl) {
+//         badWordsFilter.addWords(line)
+//     }
+// })()
 
 
 function getJobId(message) {
@@ -150,7 +150,7 @@ async function startClient() {
             return job
         },
         runJob: async (job) => {
-            job.prompt = badWordsFilter.clean(job.prompt).trim()
+            //job.prompt = badWordsFilter.clean(job.prompt).trim()
             job = Object.assign(job, {id: crypto.randomBytes(10).toString('hex'), tasks: 1, images: []})
             job.prompt = job.prompt.replaceAll("—", '--')
             let cidx = job.prompt.indexOf('--')
