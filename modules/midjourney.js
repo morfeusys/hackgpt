@@ -119,7 +119,7 @@ async function startClient() {
     async function runTask(task) {
         if (task && channel) {
             console.log(`[Midjourney] running ${JSON.stringify(task)}`)
-            if (task.prompt && !task.prompt.startsWith('test')) {
+            if (task.prompt && !task.prompt.startsWith('test') && !task.prompt.startsWith('beautiful woman in office')) {
                 try {
                     await channel.sendSlash(midjourneyBotId, 'imagine', task.prompt)
                 } catch (e) {
